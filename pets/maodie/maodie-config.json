@@ -1,0 +1,112 @@
+{
+  "pets": [
+    {
+      "id": "maodie",
+      "name": "橘猫",
+      "size": 400,
+      "balanceEnabled": false,
+      "whisperEnabled": false,
+      "workStatusEnabled": false,
+      "fixedEnabled": false,
+      "display": "desktop",
+      "position": {
+        "corner": "bottom-right",
+        "marginX": 40,
+        "marginY": 40
+      }
+    }
+  ],
+  "notificationsEnabled": true,
+  "animations": {
+    "idle": [
+      "待机"
+    ],
+    "turn": [],
+    "drag": [],
+    "clicks": [
+      "开心",
+      "被摸",
+      "我真的特别爱你"
+    ],
+    "moves": {
+      "default": {
+        "minDist": 60,
+        "maxDist": 240,
+        "margin": 20,
+        "leadSec": 0.3,
+        "tailSec": 0.3
+      },
+      "actions": [
+        {
+          "name": "走路",
+          "params": {
+            "minDist": 60,
+            "maxDist": 240
+          }
+        }
+      ]
+    },
+    "categories": [
+      {
+        "id": "小动作",
+        "weight": 20,
+        "actions": [
+          "睡觉",
+          "开心",
+          "被摸",
+          "舔毛",
+          "踩奶",
+          "追尾巴",
+          "揣手手",
+          "打哈欠伸懒腰",
+          "东张西望",
+          "扒拉杯子",
+          "钻进纸箱",
+          "打滚晒太阳",
+          "抓激光笔",
+          "偷吃被抓住",
+          "蹭头撒娇",
+          "洗脸",
+          "扑蝴蝶",
+          "看鸟",
+          "踩键盘",
+          "伸爪拍屏幕",
+          "翻肚皮",
+          "小猫抖毛"
+        ]
+      },
+      {
+        "id": "生气",
+        "weight": 10,
+        "actions": [
+          "哈气",
+          "炸毛",
+          "飞机耳",
+          "耄耋哆嗦毛",
+          "竖中指"
+        ]
+      }
+    ],
+    "events": {
+      "balance": [
+        "开心"
+      ],
+      "whisper": [
+        "睡觉"
+      ],
+      "workStatus": [
+        "待机",
+        "走路",
+        "待机",
+        "走路",
+        "开心",
+        "哈气"
+      ]
+    }
+  },
+  "animationWeights": {
+    "idle": 60,
+    "turn": 0,
+    "move": 10
+  }
+}

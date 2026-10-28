@@ -1,0 +1,19 @@
+{
+  "exportedAt": "2026-10-27",
+  "profile": "desktop",
+  "dshVersion": "0.2.1-rc.3",
+  "plugins": [
+    { "name": "dshmarket", "npm": "dshmarket", "version": "1.69.0", "repo": "https://github.com/dsh-market/dsh-market" },
+    { "name": "dsh-ops", "npm": "dsh-ops", "version": "0.4.1", "repo": "https://github.com/t-auto/dsh-ops" },
+    { "name": "dsh-skin-market", "npm": "dsh-skin-market", "version": "0.1.67", "repo": "https://github.com/kingofsoysauce/dsh-skin-market" },
+    { "name": "liang-intensity-skin", "npm": "@leon___/dsh-client-liang-intensity-skin", "version": "0.1.12", "repo": "https://github.com/kingofsoysauce/dsh-liang-skin" },
+    { "name": "dsh-git-graph", "npm": "dsh-git-graph", "version": "0.1.8", "repo": "https://github.com/enoughpower/dsh-git-graph" },
+    { "name": "dsh-skills-manager", "npm": "@michengai/dsh-skills-manager", "version": "1.2.19", "repo": "https://github.com/michengai/dsh-skills-manager" },
+    { "name": "DSH-better-sidebar", "npm": "dsh-better-sidebar", "version": "0.28.0", "repo": "https://github.com/omdsh-dev/dsh-better-sidebar" },
+    { "name": "beauticode", "npm": "beauticode-dsh", "version": "1.0.30", "repo": "https://github.com/starsstreaming/beauticode", "path": "integrations/deepseek-harness" },
+    { "name": "dsh-pet", "npm": "dsh-pet", "version": "0.3.8", "repo": "https://github.com/pc2005-cloud/dsh-pet" },
+    { "name": "modlens", "npm": "@liustack/modlens", "version": "3.27.2", "repo": "https://github.com/liustack/modlens" },
+    { "name": "billion-context", "npm": "billion-context", "version": "0.1.208", "repo": "https://github.com/ranxianglei/billion-context" },
+    { "name": "dsh-context", "npm": "dsh-context", "version": "0.77.0", "repo": "https://github.com/bowenliang123/dsh-context" }
+  ]
+}

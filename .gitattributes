@@ -1,0 +1,14 @@
+# 文本统一 LF，避免 Windows 上反复出现 CRLF 变更
+* text=auto
+
+*.py   text eol=lf
+*.mjs  text eol=lf
+*.md   text eol=lf
+*.json text eol=lf
+*.cmd  text eol=crlf
+
+# 二进制，禁止任何换行转换与 diff
+*.webm binary
+*.png  binary
+*.docx binary
+*.mp4  binary
