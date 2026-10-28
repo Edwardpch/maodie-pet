@@ -1,0 +1,48 @@
+{
+  "name": "maodie-pet",
+  "version": "0.1.0",
+  "description": "橘猫桌宠素材包（30 个透明动作）for dsh-pet；安装后自动复制到 ~/.dsh/dsh-pet/pet/maodie",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "pets",
+    "tools",
+    "docs/preview.png",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "dsh-pet",
+    "desktop-pet",
+    "maodie"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Edwardpch/maodie-pet.git"
+  },
+  "homepage": "https://github.com/Edwardpch/maodie-pet#readme",
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
+  }
+}

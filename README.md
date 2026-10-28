@@ -11,6 +11,8 @@
 | 路径 | 内容 |
 | --- | --- |
 | `pets/maodie/` | 桌宠素材包：`maodie-config.json` + 30 个动作 webm |
+| `lib/index.js` | 插件宿主半侧：安装时把 `pets/maodie` 幂等落盘到 `$DSH_HOME/dsh-pet/pet/` |
+| `package.json` / `cordis.patch.yml` | 插件清单：`dsh.bundle.patch` 指向挂载行 |
 | `docs/preview.png` | 30 个动作的总览图（每格取该动作的第 0.6 秒） |
 | `docs/maodie-prompts-cat.md` | 20 条猫动作的视频生成提示词（绿幕、10 秒、首尾同姿态） |
 | `docs/橘猫后续动作提示词.docx` | 其中 08–20 共 13 条的 Word 版，方便直接发给生成工具 |
@@ -23,12 +25,30 @@
 
 ### 30 个动作
 
-- **待机 / 移动**：待机（10 秒长循环）、走路
+- **待机 / 移动**：待机（10 秒长循环；`animations.idle` 里实际挂了 23 条——基础待机 + 22 条小动作，空闲时轮播）、走路
 - **点击回应**：开心、被摸、我真的特别爱你
 - **小动作（22）**：睡觉、开心、被摸、舔毛、踩奶、追尾巴、揣手手、打哈欠伸懒腰、东张西望、扒拉杯子、钻进纸箱、打滚晒太阳、抓激光笔、偷吃被抓住、蹭头撒娇、洗脸、扑蝴蝶、看鸟、踩键盘、伸爪拍屏幕、翻肚皮、小猫抖毛
 - **生气（5）**：哈气、炸毛、飞机耳、耄耋哆嗦毛、竖中指
 
 ## 安装
+
+### 方式一：当插件装（推荐）
+
+本仓库同时是一个 DSH 插件（`package.json` 里声明了 `dsh.bundle`，`lib/index.js` 是宿主半侧）。装上它，素材会自动就位：
+
+```bash
+dsh plugin add https://github.com/Edwardpch/maodie-pet
+```
+
+或者在插件市场的「发现」页搜 `maodie`。插件加载时做且只做一件事：把 `pets/maodie` 复制到 `%USERPROFILE%/.dsh/dsh-pet/pet/maodie/`。
+
+- 已经存在的 `maodie-config.json` 和 `*.webm` **不会被覆盖**——你手改过的配置、替换过的动作会保留；只补缺失的文件。
+- 想强制用仓库版本重刷：`node node_modules/maodie-pet/lib/index.js --install --force`。
+- 需要换安装位置（比如自定义了 `DSH_HOME`）：`node node_modules/maodie-pet/lib/index.js --install --home D:\somewhere\.dsh`。
+
+前提仍然是先装 `dsh-pet` 本体（市场里搜 `dsh-pet`）。
+
+### 方式二：手动拷贝
 
 1. 装 DeepSeek Harness 桌面端，并在插件市场里装 `dsh-pet`。
 2. 把 `pets/maodie` 整个复制到：

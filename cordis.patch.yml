@@ -1,0 +1,12 @@
+# maodie-pet —— 安装器插件
+#
+# 本仓库主要是一份桌宠素材包（pets/maodie：配置 + 30 个 VP9-alpha webm）。
+# 这一行把宿主半侧挂起来：加载时把素材幂等复制到 $DSH_HOME/dsh-pet/pet/maodie，
+# 让「装插件」和「装素材」变成同一个动作。
+#
+# - 目标路径：$DSH_HOME 默认为 ~/.dsh（Windows 即 %USERPROFILE%\.dsh），可用环境变量覆盖。
+# - 已存在的文件默认不覆盖，避免冲掉用户自己改过的 config 或替换过的 webm；
+#   需要强制覆盖时用 `node lib/index.js --install --force`。
+- insert:
+    - id: maodie-pet
+      name: 'maodie-pet'
