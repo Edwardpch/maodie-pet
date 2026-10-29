@@ -11,7 +11,11 @@
 | 路径 | 内容 |
 | --- | --- |
 | `pets/maodie/` | 桌宠素材包：`maodie-config.json` + 32 个动作 webm |
-| `lib/index.js` | 插件宿主半侧：安装时把 `pets/maodie` 幂等落盘到 `$DSH_HOME/dsh-pet/pet/` |
+| `lib/index.js` | 插件宿主半侧：安装器本体（三方合并 + hash 校验 + 备份/回滚） |
+| `lib/merge.mjs` / `lib/manifest.mjs` / `lib/pet-schema.mjs` | 配置三方合并、安装清单与文件判定、路径与动作名约定 |
+| `tools/cli.mjs` | 安装器命令行：`--dry-run` / `--restore` / `--force` / `--prune` / `--rollback` |
+| `tools/make-manifest.mjs` | 生成并校验 `.maodie-manifest.json` |
+| `test/run.mjs` | 升级策略的回归测试（12 项）；`node tools/_runner.mjs test/run.mjs` 跑 |
 | `package.json` / `cordis.patch.yml` | 插件清单：`dsh.bundle.patch` 指向挂载行 |
 | `docs/preview.png` | 32 个动作的总览图（每格取该动作的第 0.6 秒） |
 | `docs/maodie-prompts-cat.md` | 20 条猫动作的视频生成提示词（绿幕、10 秒、首尾同姿态） |
@@ -42,11 +46,45 @@ dsh plugin add https://github.com/Edwardpch/maodie-pet
 
 或者在插件市场的「发现」页搜 `maodie`。插件加载时做且只做一件事：把 `pets/maodie` 复制到 `%USERPROFILE%/.dsh/dsh-pet/pet/maodie/`。
 
-- 已经存在的 `maodie-config.json` 和 `*.webm` **不会被覆盖**——你手改过的配置、替换过的动作会保留；只补缺失的文件。
-- 想强制用仓库版本重刷：`node node_modules/maodie-pet/lib/index.js --install --force`。
-- 需要换安装位置（比如自定义了 `DSH_HOME`）：`node node_modules/maodie-pet/lib/index.js --install --home D:\somewhere\.dsh`。
-
 前提仍然是先装 `dsh-pet` 本体（市场里搜 `dsh-pet`）。
+
+### 升级：拉新动作不用手动拷文件
+
+`pets/maodie/.maodie-manifest.json` 里记着每个素材的 sha256，安装器每次运行都做三方比较（**磁盘现状 / 包内新版本 / 上次安装时的基线**），再决定每个文件怎么办：
+
+| 你的文件状态 | 新版包 | 结果 |
+| --- | --- | --- |
+| 和上次装的一样（没动过） | 变了 | 用新版覆盖，旧文件进备份目录 |
+| 你改过 / 替换过 | 变了 | **保留你的**，不覆盖 |
+| 你删掉了 | 包里还有 | **不复活**（想要就 `--restore`） |
+| 你改过 | 新版删掉了 | 保留，不删 |
+| 你没动过 | 新版删掉了 | 挪进备份目录（`--prune` 时才生效） |
+
+`maodie-config.json` 同理：你加的动作、你的顺序、你改过的非动画字段（`size`、`display`、触发事件……）都保留，只把新版包里**新增**的动作追加进去；新分类按你的顺序插在后面。
+
+```bash
+# 查看这次会发生什么（不写盘）
+node tools/cli.mjs --dry-run
+
+# 升级 / 补齐（插件安装时自动跑的就是这个）
+node tools/cli.mjs
+
+# 补回你手动删掉的动作
+node tools/cli.mjs --restore
+
+# 连你改过的文件也强制按包覆盖
+node tools/cli.mjs --force
+
+# 清掉新版已移除的素材（挪进备份，不真删）
+node tools/cli.mjs --prune
+
+# 后悔了，还原上一次升级前的文件
+node tools/cli.mjs --rollback
+```
+
+装成插件后也可以用 `node node_modules/maodie-pet/tools/cli.mjs ...`；自定义了 `DSH_HOME` 就加 `--home D:\somewhere\.dsh`。
+
+每次真正写盘前，被覆盖/移除的文件都会先复制到 `$DSH_HOME/dsh-pet/pet/.maodie-pet-backup/<时间戳>/`，这就是 `--rollback` 的来源。
 
 ### 方式二：手动拷贝
 
@@ -101,6 +139,7 @@ node tools/maodie-import.mjs ./我的视频 --register --category 小动作
 - **道具会半透明**：`踩键盘`、`扒拉杯子`、`钻进纸箱` 里的键盘/杯子/纸箱在源视频里本身就是半透明生成的，抠图只是如实保留，不是抠像失败。
 - **首尾接缝**：`打哈欠伸懒腰` 的首尾帧差 12.9（其余多在 4–7），循环播放时可能有轻微跳变。
 - **猫的大小不统一**：各片段是独立生成的，猫在画面里的占比略有差别；介意的话可以按不透明像素包围盒统一缩放后再贴底。
+- **Windows + 中文文件名**：本机实测，用 Node 的 `fs.rm` / `fs.rmSync` 删除**含中文（非 ASCII）文件名的文件**会让进程直接退出（退出码 `3221226505` / `0xC0000409`，没有异常可捕获），`fs.cpSync` 递归复制同类文件也一样。所以安装器**从不用 rm/cp 递归**：复制走 `copyFileSync` 逐文件，`--prune` 走 `renameSync` 挪进备份目录。测试脚本里"模拟用户删文件"也用 `renameSync` 而不是删。
 
 ## 工具链依赖
 

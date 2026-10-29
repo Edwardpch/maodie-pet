@@ -1,17 +1,25 @@
 {
   "name": "maodie-pet",
-  "version": "0.1.0",
-  "description": "橘猫桌宠素材包（30 个透明动作）for dsh-pet；安装后自动复制到 ~/.dsh/dsh-pet/pet/maodie",
+  "version": "0.2.0",
+  "description": "橘猫桌宠素材包（30 个透明动作）for dsh-pet；支持带 hash 校验的增量更新，不会覆盖你改过的素材和配置",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js"
+  },
+  "bin": {
+    "maodie-pet": "./tools/cli.mjs"
+  },
+  "scripts": {
+    "test": "node test/run.mjs",
+    "manifest": "node tools/make-manifest.mjs"
   },
   "files": [
     "lib",
     "cordis.patch.yml",
     "pets",
     "tools",
+    "test",
     "docs/preview.png",
     "assets",
     "README.md",

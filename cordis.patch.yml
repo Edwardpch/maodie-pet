@@ -1,12 +1,15 @@
 # maodie-pet —— 安装器插件
 #
-# 本仓库主要是一份桌宠素材包（pets/maodie：配置 + 30 个 VP9-alpha webm）。
-# 这一行把宿主半侧挂起来：加载时把素材幂等复制到 $DSH_HOME/dsh-pet/pet/maodie，
+# 本仓库主要是一份桌宠素材包（pets/maodie：配置 + 32 个 VP9-alpha webm）。
+# 这一行把宿主半侧挂起来：加载时把素材同步到 $DSH_HOME/dsh-pet/pet/maodie，
 # 让「装插件」和「装素材」变成同一个动作。
 #
 # - 目标路径：$DSH_HOME 默认为 ~/.dsh（Windows 即 %USERPROFILE%\.dsh），可用环境变量覆盖。
-# - 已存在的文件默认不覆盖，避免冲掉用户自己改过的 config 或替换过的 webm；
-#   需要强制覆盖时用 `node lib/index.js --install --force`。
+# - 升级不是"只补缺失"：每个素材都按 pets/maodie/.maodie-manifest.json 里的 sha256
+#   与上次安装的基线做三方比较——你没动过的用新版覆盖，你改过/替换过的保留，
+#   你删掉的不复活，配置只追加新动作（你的顺序与非动画字段都保留）。
+# - 被覆盖或移除的文件会先进 .maodie-pet-backup/<时间戳>/，可用 tools/cli.mjs --rollback 还原。
+# - 想强制按仓库版本重刷：node tools/cli.mjs --force
 - insert:
     - id: maodie-pet
       name: 'maodie-pet'
