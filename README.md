@@ -1,6 +1,6 @@
 # 耄耋（maodie）· 橘猫桌宠 + DSH 插件清单
 
-一只用 AI 视频生成的橘猫桌宠，跑在 [DeepSeek Harness](https://github.com/PC2005-cloud/dsh-pet) 的 `dsh-pet` 插件上：**30 个动作、带透明通道的 VP9-alpha webm、512×512 / 12fps**。
+一只用 AI 视频生成的橘猫桌宠，跑在 [DeepSeek Harness](https://github.com/PC2005-cloud/dsh-pet) 的 `dsh-pet` 插件上：**32 个动作、带透明通道的 VP9-alpha webm、512×512 / 12fps**。
 
 顺带附上一份我在用的 DSH 插件清单，以及把「绿幕视频 → 透明桌宠动画」的整条工具链。
 
@@ -10,10 +10,10 @@
 
 | 路径 | 内容 |
 | --- | --- |
-| `pets/maodie/` | 桌宠素材包：`maodie-config.json` + 30 个动作 webm |
+| `pets/maodie/` | 桌宠素材包：`maodie-config.json` + 32 个动作 webm |
 | `lib/index.js` | 插件宿主半侧：安装时把 `pets/maodie` 幂等落盘到 `$DSH_HOME/dsh-pet/pet/` |
 | `package.json` / `cordis.patch.yml` | 插件清单：`dsh.bundle.patch` 指向挂载行 |
-| `docs/preview.png` | 30 个动作的总览图（每格取该动作的第 0.6 秒） |
+| `docs/preview.png` | 32 个动作的总览图（每格取该动作的第 0.6 秒） |
 | `docs/maodie-prompts-cat.md` | 20 条猫动作的视频生成提示词（绿幕、10 秒、首尾同姿态） |
 | `docs/橘猫后续动作提示词.docx` | 其中 08–20 共 13 条的 Word 版，方便直接发给生成工具 |
 | `docs/竖中指参考视频拆解.md` | 「竖中指」梗图参考视频的逐秒拆解 + 绿幕改写版提示词 |
@@ -23,12 +23,12 @@
 | `tools/maodie-ref.png` | 白底参考图，用图生视频时当首帧参考 |
 | `dsh-plugins-share.md` / `.json` | 我在用的 12 个 DSH 插件、装法、避坑 |
 
-### 30 个动作
+### 32 个动作
 
 - **待机 / 移动**：待机（10 秒长循环；`animations.idle` 里实际挂了 23 条——基础待机 + 22 条小动作，空闲时轮播）、走路
-- **点击回应**：开心、被摸、我真的特别爱你
+- **点击回应**：开心、被摸、我真的特别爱你、笑
 - **小动作（22）**：睡觉、开心、被摸、舔毛、踩奶、追尾巴、揣手手、打哈欠伸懒腰、东张西望、扒拉杯子、钻进纸箱、打滚晒太阳、抓激光笔、偷吃被抓住、蹭头撒娇、洗脸、扑蝴蝶、看鸟、踩键盘、伸爪拍屏幕、翻肚皮、小猫抖毛
-- **生气（5）**：哈气、炸毛、飞机耳、耄耋哆嗦毛、竖中指
+- **生气（6）**：哈气、炸毛、飞机耳、耄耋哆嗦毛、竖中指、喷火
 
 ## 安装
 
