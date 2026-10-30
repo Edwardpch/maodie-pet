@@ -44,9 +44,22 @@
 dsh plugin add https://github.com/Edwardpch/maodie-pet
 ```
 
-或者在插件市场的「发现」页搜 `maodie`。插件加载时做且只做一件事：把 `pets/maodie` 复制到 `%USERPROFILE%/.dsh/dsh-pet/pet/maodie/`。
+或者在插件市场的「发现」页搜 `maodie`。插件加载时做且只做一件事：把 `pets/maodie` 里的 `maodie-config.json` 与 `maodie-animation/*.webm` 复制到 `%USERPROFILE%/.dsh/dsh-pet/pet/` 下（**平铺**，`pet/maodie-config.json` + `pet/maodie-animation/`）。
+
+> 为什么强调平铺：dsh-pet 的 `scanPetFiles()` 只扫 `pet/` 的下一层，不递归子目录（`node_modules/dsh-pet/lib/index.js:859-870`）。0.2.x 曾装进 `pet/maodie/`，宿主根本不会加载；0.3.0 起改到扁平位置，升级时会自动把旧位置的素材 rename 过来，并把旧 config 当作你的当前配置继承。
 
 前提仍然是先装 `dsh-pet` 本体（市场里搜 `dsh-pet`）。
+
+### 右键菜单：固定 / 恢复走动
+
+装上插件后，桌宠右键菜单的「更多 → maodie-pet」里会多一项：
+
+- 橘猫在走动时显示「固定橘猫（待在原地）」，点一下就把 `pets/maodie-config.json` 里 `pets[0].fixedEnabled` 改成 `true`，宿主重载后它只做待机与分类动作，不再来回走；
+- 已经固定时显示「恢复走动」，点一下改回 `false`。
+
+这一项走的是 dsh-pet 自带的第三方菜单注册表（`/dsh-pet-7340/menu/item`），不改它的任何文件；菜单是进程内存态，DSH 重启后由插件重新注册。不想用这个菜单项，就直接改 `pet/maodie-config.json` 里的 `fixedEnabled` 再「重载配置」，效果一样。
+
+注意改的必须是**生效的那份**：`~/.dsh/dsh-pet/pet/maodie-config.json`（扁平）。`pet/maodie/maodie-config.json` 是旧版位置，宿主不读。
 
 ### 升级：拉新动作不用手动拷文件
 
@@ -95,7 +108,7 @@ node tools/cli.mjs --rollback
    %USERPROFILE%/.dsh/dsh-pet/pet/
    ```
 
-   也就是最终得到 `~/.dsh/dsh-pet/pet/maodie/maodie-config.json` 和 `maodie-animation/*.webm`。
+   也就是最终得到 `~/.dsh/dsh-pet/pet/maodie-config.json` 和 `~/.dsh/dsh-pet/pet/maodie-animation/*.webm`。注意是**平铺**在 `pet/` 下，不要放进 `pet/maodie/` 子目录——dsh-pet 只扫 `pet/` 下一层。
 3. 刷新页面。默认是桌面宠物（`display: desktop`）；想在网页里显示，把 `maodie-config.json` 里的 `display` 改成 `web` 或 `both`。
 
 只想换掉某几个动作？直接往 `maodie-animation/` 里加同名 webm，再在 `animations` 里登记即可——规则见下。

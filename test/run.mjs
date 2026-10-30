@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
 import { installPet, rollbackPet, mergeConfig } from '../lib/index.js';
 import { configSnapshot } from '../lib/merge.mjs';
+import { FIXED_LABEL, FREE_LABEL, configFileOf, readFixed, setFixed, startFixedMenu, toggleFixed } from '../lib/menu.mjs';
 import { writeManifest } from '../tools/make-manifest.mjs';
 import { mkdtempSync, renameSync, rmSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -45,7 +47,7 @@ const readJson = (file) => JSON.parse(readFileSync(file, 'utf8'));
 
 check('首次安装：素材与 config 落盘，状态文件与合并基线都在', () => {
     const home = mkHome();
-    const target = join(home, 'dsh-pet', 'pet', 'maodie');
+    const target = join(home, 'dsh-pet', 'pet');
     const r = installPet({ home, now: '20260101-000000' });
     assert.equal(r.status, 'installed');
     assert.equal(r.mode, 'fresh');
@@ -70,7 +72,7 @@ check('重复安装是幂等的：第二次什么都不写', () => {
 check('用户改配置后不产生备份噪声，且用户加的动作保留', () => {
     const home = mkHome();
     installPet({ home, now: '20260101-000000' });
-    const cfgFile = join(home, 'dsh-pet', 'pet', 'maodie', 'maodie-config.json');
+    const cfgFile = join(home, 'dsh-pet', 'pet', 'maodie-config.json');
     const cfg = readJson(cfgFile);
     // 拿包里的动作改顺序/挪池子，等价于用户手动调整
     cfg.animations.idle = ['睡觉', '待机'];
@@ -85,7 +87,7 @@ check('升级：未改动的素材被新版覆盖，用户替换过的保留并�
     const home = mkHome();
     const dir = makeSource();
     installPet({ home, sourceDir: dir, now: '20260101-000000' });
-    const target = join(home, 'dsh-pet', 'pet', 'maodie');
+    const target = join(home, 'dsh-pet', 'pet');
     writeFileSync(join(target, 'maodie-animation', '睡觉.webm'), 'user-replaced');
     writeFileSync(join(dir, 'maodie-animation', '待机.webm'), 'idle-v2');
     writeFileSync(join(dir, 'maodie-animation', '睡觉.webm'), 'sleep-v2');
@@ -103,7 +105,7 @@ check('新动作进配置与分类，用户顺序与自定义动作不受影响'
     const home = mkHome();
     const dir = makeSource();
     installPet({ home, sourceDir: dir, now: '20260101-000000' });
-    const target = join(home, 'dsh-pet', 'pet', 'maodie');
+    const target = join(home, 'dsh-pet', 'pet');
     const cfgFile = join(target, 'maodie-config.json');
     const mine = readJson(cfgFile);
     mine.animations.clicks = ['开心'];
@@ -139,7 +141,7 @@ check('用户删掉的素材默认不复活，--restore 才补', () => {
     const home = mkHome();
     const dir = makeSource();
     installPet({ home, sourceDir: dir, now: '20260101-000000' });
-    const target = join(home, 'dsh-pet', 'pet', 'maodie');
+    const target = join(home, 'dsh-pet', 'pet');
     simulateUserDelete(join(target, 'maodie-animation', '开心.webm'));
     const normal = installPet({ home, sourceDir: dir, now: '20260102-000000' });
     assert.ok(normal.skipped.includes('maodie-animation/开心.webm'), `skipped=${normal.skipped}`);
@@ -153,7 +155,7 @@ check('--prune 删除新版已移除的素材，用户改过的留着', () => {
     const home = mkHome();
     const dir = makeSource();
     installPet({ home, sourceDir: dir, now: '20260101-000000' });
-    const target = join(home, 'dsh-pet', 'pet', 'maodie');
+    const target = join(home, 'dsh-pet', 'pet');
     writeFileSync(join(target, 'maodie-animation', '开心.webm'), 'user-edited');
     simulateUserDelete(join(dir, 'maodie-animation', '睡觉.webm'));
     simulateUserDelete(join(dir, 'maodie-animation', '开心.webm'));
@@ -177,7 +179,7 @@ check('从旧版（没有安装清单）升级走保守模式：只追加，不�
     const dir = makeSource();
     installPet({ home, sourceDir: dir, now: '20260101-000000' });
     simulateUserDelete(join(home, 'dsh-pet', 'pet', '.maodie-pet.json'));
-    const target = join(home, 'dsh-pet', 'pet', 'maodie');
+    const target = join(home, 'dsh-pet', 'pet');
     const cfgFile = join(target, 'maodie-config.json');
     const legacy = readJson(cfgFile);
     legacy.animations.idle = ['待机'];
@@ -198,7 +200,7 @@ check('--force 覆盖用户替换过的素材', () => {
     const home = mkHome();
     const dir = makeSource();
     installPet({ home, sourceDir: dir, now: '20260101-000000' });
-    const target = join(home, 'dsh-pet', 'pet', 'maodie');
+    const target = join(home, 'dsh-pet', 'pet');
     writeFileSync(join(target, 'maodie-animation', '待机.webm'), 'user-replaced');
     const r = installPet({ home, sourceDir: dir, force: true, now: '20260106-000000' });
     assert.equal(r.mode, 'force');
@@ -206,11 +208,51 @@ check('--force 覆盖用户替换过的素材', () => {
     assert.equal(readFileSync(join(target, 'maodie-animation', '待机.webm'), 'utf8'), 'idle-v1');
 });
 
+check('安装不覆盖用户改过的宠物实例字段（fixedEnabled / 大小 / 位置）', () => {
+    const home = mkHome();
+    const dir = makeSource();
+    installPet({ home, sourceDir: dir, now: '20260101-000000' });
+    const cfgFile = join(home, 'dsh-pet', 'pet', 'maodie-config.json');
+    const cfg = readJson(cfgFile);
+    cfg.pets[0].fixedEnabled = true;
+    cfg.pets[0].size = 512;
+    cfg.pets[0].position = { corner: 'top-left', marginX: 12, marginY: 34 };
+    writeJson(cfgFile, cfg);
+    const r = installPet({ home, sourceDir: dir, now: '20260101-000003' });
+    assert.equal(r.config.written, false);
+    const after = readJson(cfgFile).pets[0];
+    assert.equal(after.fixedEnabled, true);
+    assert.equal(after.size, 512);
+    assert.deepEqual(after.position, { corner: 'top-left', marginX: 12, marginY: 34 });
+});
+
+check('旧版 pet/maodie 布局：素材搬到扁平位置，旧 config 当作用户配置继承', () => {
+    const home = mkHome();
+    const legacy = join(home, 'dsh-pet', 'pet', 'maodie');
+    mkdirSync(join(legacy, 'maodie-animation'), { recursive: true });
+    writeJson(join(legacy, 'maodie-config.json'), {
+        pets: [{ id: 'maodie', size: 400, fixedEnabled: true }],
+        animations: {
+            idle: ['待机'],
+            clicks: ['开心'],
+            categories: [{ id: '小动作', weight: 20, actions: ['睡觉', '开心'] }],
+        },
+    });
+    writeFileSync(join(legacy, 'maodie-animation', '待机.webm'), 'idle-legacy');
+    const dir = makeSource();
+    const r = installPet({ home, sourceDir: dir, now: '20260101-000000' });
+    const flat = join(home, 'dsh-pet', 'pet');
+    assert.equal(readFileSync(join(flat, 'maodie-animation', '待机.webm'), 'utf8'), 'idle-legacy');
+    assert.equal(existsSync(join(legacy, 'maodie-animation', '待机.webm')), false, '旧位置的素材应被搬走');
+    assert.ok(r.warnings.some(w => w.includes('旧版')), `warnings=${r.warnings}`);
+    assert.equal(readJson(join(flat, 'maodie-config.json')).pets[0].fixedEnabled, true);
+});
+
 check('rollback 还原升级前的文件', () => {
     const home = mkHome();
     const dir = makeSource();
     installPet({ home, sourceDir: dir, now: '20260101-000000' });
-    const target = join(home, 'dsh-pet', 'pet', 'maodie');
+    const target = join(home, 'dsh-pet', 'pet');
     const before = readFileSync(join(target, 'maodie-animation', '待机.webm'));
     writeFileSync(join(dir, 'maodie-animation', '待机.webm'), 'idle-v2');
     writeManifest(dir, '0.0.0-t6');
@@ -248,6 +290,82 @@ check('包里发布的 .maodie-manifest.json 与素材一致', () => {
     assert.ok(files.length >= 32, `files=${files.length}`);
     for (const rel of files)
         assert.ok(existsSync(join(SRC, rel)), `${rel} 在清单里但文件不存在`);
+});
+
+check('菜单开关：setFixed 只改 fixedEnabled，保留 CRLF 与其余键', () => {
+    const home = mkHome();
+    installPet({ home, now: '20260101-000000' });
+    const file = configFileOf(home);
+    const before = readFileSync(file, 'utf8');
+    assert.ok(before.includes('\r\n'), '安装出来的 config 应该是 CRLF');
+    const custom = JSON.parse(before);
+    custom.myOwnKey = 'keep-me';
+    custom.pets[0].size = 321;
+    writeFileSync(file, `${JSON.stringify(custom, null, 2).replace(/\n/g, '\r\n')}\r\n`, 'utf8');
+    assert.equal(readFixed(home), false);
+    const r = setFixed(home, true);
+    assert.equal(r.fixed, true);
+    const after = readFileSync(file, 'utf8');
+    assert.ok(after.includes('\r\n'));
+    assert.ok(after.endsWith('\r\n'));
+    const config = JSON.parse(after);
+    assert.equal(config.pets[0].fixedEnabled, true);
+    assert.equal(config.pets[0].size, 321);
+    assert.equal(config.myOwnKey, 'keep-me');
+    assert.equal(toggleFixed(home).fixed, false);
+});
+
+check('菜单开关：注册 → 点击改配置并 reload → 换成「恢复走动」', async () => {
+    const home = mkHome();
+    installPet({ home, now: '20260101-000000' });
+    const seen = { labels: [], reloads: 0, deleted: 0 };
+    let clickServed = false;
+    const server = createServer((req, res) => {
+        const url = new URL(req.url, 'http://x');
+        const send = (obj) => {
+            res.writeHead(200, { 'content-type': 'application/json' });
+            res.end(JSON.stringify(obj));
+        };
+        if (url.pathname.endsWith('/menu/item')) {
+            if (req.method === 'DELETE') {
+                seen.deleted++;
+                return send({ ok: true });
+            }
+            let body = '';
+            req.on('data', (c) => (body += c));
+            req.on('end', () => {
+                const parsed = JSON.parse(body);
+                seen.labels.push(parsed.labels[0]);
+                send({ ok: true });
+            });
+            return;
+        }
+        if (url.pathname.endsWith('/menu/events')) {
+            const label = seen.labels.at(-1);
+            if (!clickServed) {
+                clickServed = true;
+                return send({ ok: true, events: { [label]: 'maodie' } });
+            }
+            return send({ ok: true, events: { [label]: null } });
+        }
+        if (url.pathname.endsWith('/reload')) {
+            seen.reloads++;
+            return send({ reloading: true });
+        }
+        send({ ok: false });
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = server.address().port;
+    const menu = startFixedMenu({ port, home, logger: { info() {}, warn() {} } });
+    const deadline = Date.now() + 8000;
+    while (Date.now() < deadline && !(seen.reloads === 1 && seen.labels.length === 2))
+        await new Promise((resolve) => setTimeout(resolve, 50));
+    await menu.stop();
+    server.close();
+    assert.equal(seen.reloads, 1, '点击后应调用 /reload');
+    assert.deepEqual(seen.labels, [FIXED_LABEL, FREE_LABEL]);
+    assert.equal(readFixed(home), true);
+    assert.ok(seen.deleted >= 1, 'stop() 应注销菜单项');
 });
 
 // 一项一个子进程：本机（Node 24 / Windows）上同一个进程里反复做 rmSync 临时目录、
