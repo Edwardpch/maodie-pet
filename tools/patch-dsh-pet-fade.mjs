@@ -21,7 +21,7 @@ import { existsSync, readFileSync, writeFileSync, copyFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-const MARKER = '叠层淡入';
+const MARKER = '硬切 + 垫底';
 
 const args = process.argv.slice(2);
 const checkOnly = args.includes('--check');
@@ -53,38 +53,39 @@ function patchClient(file) {
   const text = readFileSync(file, 'utf8');
   if (text.includes(MARKER)) return { file, state: 'patched' };
 
+  // 要同时解决两件事：
+  //   1) 闪白 —— 两个 <video> 各做 0.18s opacity 过渡，中点两帧各 50%，合成 alpha 0.75；
+  //   2) 消失一下 —— 新素材首帧还没解码出来时，旧帧已经被摘掉，窗口里就空了。
+  // 做法：CSS 过渡关掉（硬切），旧帧保持完全不透明垫底（z-index 2），新帧直接叠上去（3），
+  // 150ms 后再摘旧的。既没有半透明中间帧，也不会露出空白。
   const baseCss =
-    '".dsh-pet-video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;opacity:0;transition:opacity .18s ease;transform-origin:center}",';
-  const frontCss = '".dsh-pet-video.is-front{opacity:1}",';
-  const removeFront = '\t\t\t\t\told.current.classList.remove("is-front");';
+    '".dsh-pet-video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;opacity:0;';
+  const removeFront = '					old.current.classList.remove("is-front");';
 
-  for (const anchor of [baseCss, frontCss, removeFront]) {
-    if (!text.includes(anchor)) {
-      return { file, state: 'mismatch', reason: `锚点没匹配上：${anchor.slice(0, 48)}…` };
-    }
-  }
+  const baseStart = text.indexOf(baseCss);
+  if (baseStart === -1) return { file, state: 'mismatch', reason: '没找到 .dsh-pet-video 的 CSS' };
+  const baseEnd = text.indexOf('"', baseStart + 1);
+  const baseRule = text.slice(baseStart, baseEnd + 1);
+  if (!text.includes(removeFront)) return { file, state: 'mismatch', reason: '没找到摘 is-front 的那一行' };
   if (checkOnly) return { file, state: 'not-patched' };
 
-  let next = text
-    .replace(baseCss, baseCss.replace('transform-origin:center}', 'transform-origin:center;z-index:1}'))
-    .replace(frontCss, '".dsh-pet-video.is-front{opacity:1;z-index:2}",')
-    .replace(
-      removeFront,
-      [
-        '\t\t\t\t\t// 叠层淡入：旧素材保持不透明垫底（z-index 2），新素材在上层（3）淡入；',
-        '\t\t\t\t\t// 两帧不再各占 50%，合成 alpha 恒为 1，不会发白。240ms 后再摘掉旧的。',
-        '\t\t\t\t\tconst prev = old.current;',
-        '\t\t\t\t\tprev.style.zIndex = "2";',
-        '\t\t\t\t\tel.style.zIndex = "3";',
-        '\t\t\t\t\twindow.setTimeout(() => {',
-        '\t\t\t\t\t\tif (prev !== el) {',
-        '\t\t\t\t\t\t\tprev.classList.remove("is-front");',
-        '\t\t\t\t\t\t\tprev.style.zIndex = "";',
-        '\t\t\t\t\t\t}',
-        '\t\t\t\t\t\tif (el.style.zIndex === "3") el.style.zIndex = "";',
-        '\t\t\t\t\t}, 240);',
-      ].join('\n'),
-    );
+  const layered = [
+    '					// (maodie-pet 补丁) 硬切 + 垫底：旧帧保持完全不透明在下面，新帧直接叠上去，',
+    '					// 150ms 后再摘掉旧的。没有 opacity 过渡，所以不会半透明闪，也不会在新帧没解出来时露出空白。',
+    '					const prev = old.current;',
+    '					prev.style.zIndex = "2";',
+    '					el.style.zIndex = "3";',
+    '					window.setTimeout(() => {',
+    '						if (prev !== el) {',
+    '							prev.classList.remove("is-front");',
+    '							prev.style.zIndex = "";',
+    '						}',
+    '						if (el.style.zIndex === "3") el.style.zIndex = "";',
+    '					}, 150);',
+  ].join('\n');
+
+  let next = text.replace(baseRule, baseRule.replace('transition:opacity .18s ease;', 'transition:none;'));
+  next = next.replace(removeFront, layered);
   return { file, state: 'patched-now', backup: backupAndWrite(file, next) };
 }
 
