@@ -24,7 +24,7 @@
 | `tools/maodie-matte.py` | 按色相抠图：把豆包/即梦的灰绿影棚背景抠成 alpha |
 | `tools/maodie-check.py` | 体检：尺寸、fps、alpha 通道、绿边残留、循环接缝 |
 | `tools/maodie-import.mjs` / `.cmd` | 批量转码 + 自动登记到 config |
-| `tools/patch-dsh-pet-fade.mjs` | 关掉 dsh-pet 换动作时的 0.18s 交叉淡入（升级 dsh-pet 后重跑） |
+| `tools/patch-dsh-pet-fade.mjs` | 把 dsh-pet 换动作的 0.18s 交叉淡入改成叠层淡入（不再发白；升级 dsh-pet 后重跑） |
 | `tools/maodie-ref.png` | 白底参考图，用图生视频时当首帧参考 |
 | `dsh-plugins-share.md` / `.json` | 我在用的 12 个 DSH 插件、装法、避坑 |
 
@@ -153,8 +153,9 @@ node tools/maodie-import.mjs ./我的视频 --register --category 小动作
 - **道具会半透明**：`踩键盘`、`扒拉杯子`、`钻进纸箱` 里的键盘/杯子/纸箱在源视频里本身就是半透明生成的，抠图只是如实保留，不是抠像失败。
 - **首尾接缝**：`打哈欠伸懒腰` 的首尾帧差 12.9（其余多在 4–7），循环播放时可能有轻微跳变。
 - **猫的大小不统一**：各片段是独立生成的，猫在画面里的占比略有差别；介意的话可以按不透明像素包围盒统一缩放后再贴底。
-- **换动作时闪一下（dsh-pet 的 0.18s 交叉淡入）**：桌面端 sprite 是双 `<video>` 交叉淡入，过渡期间两帧各 50% 不透明度，像素 alpha 掉到 0.75 —— 透明桌面下看就是每次换动作闪一下。
-  dsh-pet 0.3.8 / 0.4.1 都是这样，升级不会修。可用 `node tools/patch-dsh-pet-fade.mjs` 把它改成硬切；补丁打在 `$DSH_HOME/profiles/<profile>/node_modules/dsh-pet/runtime/electron-helper/index.html` 里，**升级 dsh-pet 后要重跑一次**，然后 `POST /dsh-pet-7340/reload`。
+- **换动作时闪一下（dsh-pet 的 0.18s 交叉淡入）**：dsh-pet 用两个 `<video>` 双缓冲，切换时新旧各做一次 0.18s 的 opacity 过渡；过渡中点两帧各 50% 不透明度，合成 alpha 掉到 0.75，透明窗口下就是每次换动作“发白闪一下”。
+  dsh-pet 0.3.8 / 0.4.1 都是这样，升级不会修。跑 `node tools/patch-dsh-pet-fade.mjs` 改成**叠层淡入**：旧素材始终不透明垫底（`z-index:2`），新素材在上层（`z-index:3`）淡入，240ms 后再摘掉旧的，合成 alpha 恒为 1。
+  补丁打在 `$DSH_HOME/profiles/<profile>/node_modules/dsh-pet/lib/client.js`（页面里真正画宠物的前端 bundle）；**升级/重装 dsh-pet 后要重跑一次**，然后刷新 DSH 页面。脚本对 `runtime/electron-helper/index.html` 的老路径也兼容（存在才改）。
 - **Windows + 中文文件名**：本机实测，用 Node 的 `fs.rm` / `fs.rmSync` 删除**含中文（非 ASCII）文件名的文件**会让进程直接退出（退出码 `3221226505` / `0xC0000409`，没有异常可捕获），`fs.cpSync` 递归复制同类文件也一样。所以安装器**从不用 rm/cp 递归**：复制走 `copyFileSync` 逐文件，`--prune` 走 `renameSync` 挪进备份目录。测试脚本里"模拟用户删文件"也用 `renameSync` 而不是删。
 
 ## 工具链依赖
