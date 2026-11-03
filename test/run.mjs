@@ -318,7 +318,7 @@ check('菜单开关：setFixed 只改 fixedEnabled，保留 CRLF 与其余键', 
 check('菜单开关：注册 → 点击改配置并 reload → 换成「恢复走动」', async () => {
     const home = mkHome();
     installPet({ home, now: '20260101-000000' });
-    const seen = { labels: [], reloads: 0, deleted: 0 };
+    const seen = { labels: [], reloads: 0, deleted: 0, positions: [] };
     let clickServed = false;
     let secondServed = false;
     const server = createServer((req, res) => {
@@ -354,6 +354,19 @@ check('菜单开关：注册 → 点击改配置并 reload → 换成「恢复�
             }
             return send({ ok: true, events: {} });
         }
+        if (url.pathname.endsWith('/pose')) {
+            // 桌面 Helper 上报的实况：归一化中心坐标
+            return send({ ok: true, petId: 'maodie', x: 0.42, y: 0.66 });
+        }
+        if (url.pathname.endsWith('/position')) {
+            let body = '';
+            req.on('data', (c) => (body += c));
+            req.on('end', () => {
+                seen.positions.push(JSON.parse(body));
+                send({ ok: true });
+            });
+            return;
+        }
         if (url.pathname.endsWith('/reload')) {
             seen.reloads++;
             return send({ reloading: true });
@@ -371,6 +384,11 @@ check('菜单开关：注册 → 点击改配置并 reload → 换成「恢复�
     assert.equal(seen.reloads, 2, '两次点击都应调用 /reload');
     assert.deepEqual(seen.labels, [FIXED_LABEL, FREE_LABEL, FIXED_LABEL]);
     assert.equal(readFixed(home), false, '第二次点击应切回走动');
+    // 每次 /reload 之后都要把宠物挪回原处，否则切开关会把猫弹回配置角落
+    assert.deepEqual(seen.positions, [
+        { x: 0.42, y: 0.66, mode: 'instant' },
+        { x: 0.42, y: 0.66, mode: 'instant' },
+    ], '两次切换都应恢复原位置');
     assert.ok(seen.deleted >= 1, 'stop() 应注销菜单项');
 });
 

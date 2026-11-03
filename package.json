@@ -1,6 +1,6 @@
 {
     "name": "maodie-pet",
-    "version": "0.3.3",
+    "version": "0.3.4",
     "description": "橘猫桌宠素材包（30 个透明动作）for dsh-pet；支持带 hash 校验的增量更新，不会覆盖你改过的素材和配置",
     "type": "module",
     "main": "lib/index.js",
