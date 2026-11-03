@@ -24,7 +24,7 @@
 | `tools/maodie-matte.py` | 按色相抠图：把豆包/即梦的灰绿影棚背景抠成 alpha |
 | `tools/maodie-check.py` | 体检：尺寸、fps、alpha 通道、绿边残留、循环接缝 |
 | `tools/maodie-import.mjs` / `.cmd` | 批量转码 + 自动登记到 config |
-| `tools/patch-dsh-pet-fade.mjs` | 把 dsh-pet 换动作的交叉淡入改成「硬切 + 旧帧垫底」（不再闪白、也不消失；升级 dsh-pet 后重跑） |
+| `tools/patch-dsh-pet-fade.mjs` | 手动补一次 dsh-pet 的「硬切 + 旧帧垫底」（插件加载时本来就会自动补，这个只用于 `--check` 或不想重启时） |
 | `tools/maodie-ref.png` | 白底参考图，用图生视频时当首帧参考 |
 | `dsh-plugins-share.md` / `.json` | 我在用的 12 个 DSH 插件、装法、避坑 |
 
@@ -155,7 +155,11 @@ node tools/maodie-import.mjs ./我的视频 --register --category 小动作
 - **猫的大小不统一**：各片段是独立生成的，猫在画面里的占比略有差别；介意的话可以按不透明像素包围盒统一缩放后再贴底。
 - **换动作时闪一下 / 消失一下（dsh-pet 的双 `<video>` 切换）**：dsh-pet 用两个 `<video>` 双缓冲。默认两边各做 0.18s 的 opacity 过渡，中点两帧各 50% 不透明度，合成 alpha 掉到 0.75 —— 透明窗口下就是“发白闪一下”；如果只把过渡关成硬切，新素材首帧还没解码出来时旧帧已经被摘掉，又会“消失一下再出现”。
   跑 `node tools/patch-dsh-pet-fade.mjs` 改成**硬切 + 旧帧垫底**：CSS 过渡关掉，旧帧保持完全不透明垫在下面（`z-index:2`），新帧直接叠上去（`z-index:3`），150ms 后再摘掉旧的 —— 既没有半透明中间帧，也不会有空白帧。
-  补丁打在 `$DSH_HOME/profiles/<profile>/node_modules/dsh-pet/lib/client.js`（页面里真正画宠物的前端 bundle）；**升级/重装 dsh-pet 后要重跑一次**，然后刷新 DSH 页面（前端 bundle 会重新读盘）。dsh-pet 0.3.8 / 0.4.1 默认都是淡入版本，升级不会自带修复。
+  补丁打在 `$DSH_HOME/profiles/<profile>/node_modules/dsh-pet/lib/client.js`（页面里真正画宠物的前端 bundle）。
+
+**不用手动跑**：插件每次加载都会自动补一遍（幂等，dsh-pet 升级把文件覆盖回去后，下次启动又会补上）。改完刷新 DSH 页面即可生效 —— 前端 bundle 会重新读盘，不用重启宿主。想先看状态或者不想重启时，才需要 `node tools/patch-dsh-pet-fade.mjs [--check]`。
+
+dsh-pet 0.3.8 / 0.4.1 默认都是淡入版本，升级 dsh-pet 不会自带这个修复。
 - **Windows + 中文文件名**：本机实测，用 Node 的 `fs.rm` / `fs.rmSync` 删除**含中文（非 ASCII）文件名的文件**会让进程直接退出（退出码 `3221226505` / `0xC0000409`，没有异常可捕获），`fs.cpSync` 递归复制同类文件也一样。所以安装器**从不用 rm/cp 递归**：复制走 `copyFileSync` 逐文件，`--prune` 走 `renameSync` 挪进备份目录。测试脚本里"模拟用户删文件"也用 `renameSync` 而不是删。
 
 ## 工具链依赖

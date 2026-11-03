@@ -4,6 +4,7 @@ import { installPet, rollbackPet, mergeConfig } from '../lib/index.js';
 import { configSnapshot } from '../lib/merge.mjs';
 import { FIXED_LABEL, FREE_LABEL, configFileOf, readFixed, setFixed, startFixedMenu, toggleFixed } from '../lib/menu.mjs';
 import { writeManifest } from '../tools/make-manifest.mjs';
+import { applyFadePatch } from '../lib/fade-patch.mjs';
 import { mkdtempSync, renameSync, rmSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { availableParallelism, tmpdir } from 'node:os';
@@ -390,6 +391,41 @@ check('菜单开关：注册 → 点击改配置并 reload → 换成「恢复�
         { x: 0.42, y: 0.66, mode: 'instant' },
     ], '两次切换都应恢复原位置');
     assert.ok(seen.deleted >= 1, 'stop() 应注销菜单项');
+});
+
+check('dsh-pet 补丁：把 0.18s 交叉淡入改成硬切+垫底，且幂等', async () => {
+    const profileDir = mkdtempSync(join(sandbox, 'p-'));
+    const dir = join(profileDir, 'node_modules', 'dsh-pet', 'lib');
+    mkdirSync(dir, { recursive: true });
+    const file = join(dir, 'client.js');
+    writeFileSync(file, [
+        'const css = [',
+        '	".dsh-pet-video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;opacity:0;transition:opacity .18s ease;transform-origin:center}",',
+        '	".dsh-pet-video.is-front{opacity:1}",',
+        '].join("");',
+        'const onReady = () => {',
+        '	const old = frontRef.current === 0 ? videoARef : videoBRef;',
+        '	el.classList.add("is-front");',
+        '	if (old.current && old.current !== el) {',
+        '		old.current.classList.remove("is-front");',
+        '		old.current.pause();',
+        '	}',
+        '};',
+    ].join(String.fromCharCode(10)));
+
+    const first = applyFadePatch({ profileDir });
+    assert.deepEqual(first.patched, [file], '第一次应打上补丁');
+    const text = readFileSync(file, 'utf8');
+    assert.ok(text.includes('transition:none;'), '应关掉 CSS 过渡');
+    assert.ok(!text.includes('transition:opacity .18s ease;'), '不应残留 0.18s 过渡');
+    assert.ok(text.includes('硬切 + 垫底'), '应写入补丁标记');
+    assert.ok(text.includes('prev.style.zIndex = "2"'), '旧帧应垫底');
+    assert.ok(text.includes('el.style.zIndex = "3"'), '新帧应叠在上层');
+    assert.ok(text.includes('}, 150);'), '150ms 后才摘旧帧');
+
+    const second = applyFadePatch({ profileDir });
+    assert.deepEqual(second.patched, [], '第二次不应重复改');
+    assert.deepEqual(second.already, [file], '第二次应报 already patched');
 });
 
 // 一项一个子进程：本机（Node 24 / Windows）上同一个进程里反复做 rmSync 临时目录、
