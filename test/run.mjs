@@ -320,6 +320,7 @@ check('菜单开关：注册 → 点击改配置并 reload → 换成「恢复�
     installPet({ home, now: '20260101-000000' });
     const seen = { labels: [], reloads: 0, deleted: 0 };
     let clickServed = false;
+    let secondServed = false;
     const server = createServer((req, res) => {
         const url = new URL(req.url, 'http://x');
         const send = (obj) => {
@@ -342,11 +343,16 @@ check('菜单开关：注册 → 点击改配置并 reload → 换成「恢复�
         }
         if (url.pathname.endsWith('/menu/events')) {
             const label = seen.labels.at(-1);
+            // 桌面右键点出来的 payload 是 null，网页端点出来才带 pet 实例：两条都要能处理。
             if (!clickServed) {
                 clickServed = true;
+                return send({ ok: true, events: { [label]: null } });
+            }
+            if (!secondServed) {
+                secondServed = true;
                 return send({ ok: true, events: { [label]: 'maodie' } });
             }
-            return send({ ok: true, events: { [label]: null } });
+            return send({ ok: true, events: {} });
         }
         if (url.pathname.endsWith('/reload')) {
             seen.reloads++;
@@ -358,13 +364,13 @@ check('菜单开关：注册 → 点击改配置并 reload → 换成「恢复�
     const port = server.address().port;
     const menu = startFixedMenu({ port, home, logger: { info() {}, warn() {} } });
     const deadline = Date.now() + 8000;
-    while (Date.now() < deadline && !(seen.reloads === 1 && seen.labels.length === 2))
+    while (Date.now() < deadline && !(seen.reloads === 2 && seen.labels.length === 3))
         await new Promise((resolve) => setTimeout(resolve, 50));
     await menu.stop();
     server.close();
-    assert.equal(seen.reloads, 1, '点击后应调用 /reload');
-    assert.deepEqual(seen.labels, [FIXED_LABEL, FREE_LABEL]);
-    assert.equal(readFixed(home), true);
+    assert.equal(seen.reloads, 2, '两次点击都应调用 /reload');
+    assert.deepEqual(seen.labels, [FIXED_LABEL, FREE_LABEL, FIXED_LABEL]);
+    assert.equal(readFixed(home), false, '第二次点击应切回走动');
     assert.ok(seen.deleted >= 1, 'stop() 应注销菜单项');
 });
 
