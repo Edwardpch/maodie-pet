@@ -5,6 +5,7 @@ import { configSnapshot } from '../lib/merge.mjs';
 import { FIXED_LABEL, FREE_LABEL, configFileOf, readFixed, setFixed, startFixedMenu, toggleFixed } from '../lib/menu.mjs';
 import { writeManifest } from '../tools/make-manifest.mjs';
 import { applyFadePatch } from '../lib/fade-patch.mjs';
+import { applyLiveConfigPatch, LIVE_MARKER } from '../lib/live-config-patch.mjs';
 import { mkdtempSync, renameSync, rmSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { availableParallelism, tmpdir } from 'node:os';
@@ -316,10 +317,10 @@ check('菜单开关：setFixed 只改 fixedEnabled，保留 CRLF 与其余键', 
     assert.equal(toggleFixed(home).fixed, false);
 });
 
-check('菜单开关：注册 → 点击改配置并 reload → 换成「恢复走动」', async () => {
+check('菜单开关：注册 → 点击只改配置（不重启 Helper）→ 换成「恢复走动」', async () => {
     const home = mkHome();
     installPet({ home, now: '20260101-000000' });
-    const seen = { labels: [], reloads: 0, deleted: 0, positions: [] };
+    const seen = { labels: [], reloads: 0, deleted: 0 };
     let clickServed = false;
     let secondServed = false;
     const server = createServer((req, res) => {
@@ -355,19 +356,6 @@ check('菜单开关：注册 → 点击改配置并 reload → 换成「恢复�
             }
             return send({ ok: true, events: {} });
         }
-        if (url.pathname.endsWith('/pose')) {
-            // 桌面 Helper 上报的实况：归一化中心坐标
-            return send({ ok: true, petId: 'maodie', x: 0.42, y: 0.66 });
-        }
-        if (url.pathname.endsWith('/position')) {
-            let body = '';
-            req.on('data', (c) => (body += c));
-            req.on('end', () => {
-                seen.positions.push(JSON.parse(body));
-                send({ ok: true });
-            });
-            return;
-        }
         if (url.pathname.endsWith('/reload')) {
             seen.reloads++;
             return send({ reloading: true });
@@ -378,18 +366,13 @@ check('菜单开关：注册 → 点击改配置并 reload → 换成「恢复�
     const port = server.address().port;
     const menu = startFixedMenu({ port, home, logger: { info() {}, warn() {} } });
     const deadline = Date.now() + 8000;
-    while (Date.now() < deadline && !(seen.reloads === 2 && seen.labels.length === 3))
+    while (Date.now() < deadline && seen.labels.length < 3)
         await new Promise((resolve) => setTimeout(resolve, 50));
     await menu.stop();
     server.close();
-    assert.equal(seen.reloads, 2, '两次点击都应调用 /reload');
+    assert.equal(seen.reloads, 0, '切开关不应重启桌面 Helper（否则所有宠物窗口都会重建）');
     assert.deepEqual(seen.labels, [FIXED_LABEL, FREE_LABEL, FIXED_LABEL]);
     assert.equal(readFixed(home), false, '第二次点击应切回走动');
-    // 每次 /reload 之后都要把宠物挪回原处，否则切开关会把猫弹回配置角落
-    assert.deepEqual(seen.positions, [
-        { x: 0.42, y: 0.66, mode: 'instant' },
-        { x: 0.42, y: 0.66, mode: 'instant' },
-    ], '两次切换都应恢复原位置');
     assert.ok(seen.deleted >= 1, 'stop() 应注销菜单项');
 });
 
@@ -424,6 +407,32 @@ check('dsh-pet 补丁：把 0.18s 交叉淡入改成硬切+垫底，且幂等', 
     assert.ok(text.includes('}, 150);'), '150ms 后才摘旧帧');
 
     const second = applyFadePatch({ profileDir });
+    assert.deepEqual(second.patched, [], '第二次不应重复改');
+    assert.deepEqual(second.already, [file], '第二次应报 already patched');
+});
+
+check('dsh-pet 实时配置补丁：给 events.js 挂轮询，且幂等', async () => {
+    const profileDir = mkdtempSync(join(sandbox, 'live-'));
+    const dir = join(profileDir, 'node_modules', 'dsh-pet', 'runtime', 'electron-helper');
+    mkdirSync(dir, { recursive: true });
+    const file = join(dir, 'events.js');
+    writeFileSync(file, [
+        "'use strict';",
+        'function startLoops() {',
+        '  if (loopsStarted) return;',
+        '  loopsStarted = true;',
+        '}',
+    ].join(String.fromCharCode(10)));
+
+    const first = applyLiveConfigPatch({ profileDir });
+    assert.deepEqual(first.patched, [file], '第一次应打上补丁');
+    const text = readFileSync(file, 'utf8');
+    assert.ok(text.includes(LIVE_MARKER), '应写入补丁标记');
+    assert.ok(text.includes('s.pet.fixedEnabled ='), '应同步 fixedEnabled');
+    assert.ok(text.includes("BASE + '/config'"), '应轮询 /config');
+    assert.ok(!text.includes('/reload'), '不应触发 Helper 重启');
+
+    const second = applyLiveConfigPatch({ profileDir });
     assert.deepEqual(second.patched, [], '第二次不应重复改');
     assert.deepEqual(second.already, [file], '第二次应报 already patched');
 });
