@@ -55,8 +55,8 @@ dsh plugin add https://github.com/Edwardpch/maodie-pet
 
 装上插件后，桌宠右键菜单的「更多 → maodie-pet」里会多一项：
 
-- 橘猫在走动时显示「固定橘猫（待在原地）」，点一下就把 `pets/maodie-config.json` 里 `pets[0].fixedEnabled` 改成 `true`，宿主重载后它只做待机与分类动作，不再来回走；
-- 已经固定时显示「恢复走动」，点一下改回 `false`。
+- 橘猫在走动时显示「原地不动」，点一下就把 `pets/maodie-config.json` 里 `pets[0].fixedEnabled` 改成 `true`，宿主重载后它只做待机与分类动作，不再来回走；
+- 已经固定时显示「放开走动」，点一下改回 `false`。
 
 这一项走的是 dsh-pet 自带的第三方菜单注册表（`/dsh-pet-7340/menu/item`），不改它的任何文件；菜单是进程内存态，DSH 重启后由插件重新注册。不想用这个菜单项，就直接改 `pet/maodie-config.json` 里的 `fixedEnabled` 再「重载配置」，效果一样。
 

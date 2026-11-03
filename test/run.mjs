@@ -317,7 +317,7 @@ check('菜单开关：setFixed 只改 fixedEnabled，保留 CRLF 与其余键', 
     assert.equal(toggleFixed(home).fixed, false);
 });
 
-check('菜单开关：注册 → 点击只改配置（不重启 Helper）→ 换成「恢复走动」', async () => {
+check('菜单开关：注册 → 点击只改配置（不重启 Helper）→ 换成「放开走动」', async () => {
     const home = mkHome();
     installPet({ home, now: '20260101-000000' });
     const seen = { labels: [], reloads: 0, deleted: 0 };
