@@ -1,6 +1,6 @@
 {
-  "version": "0.3.10",
-  "generatedAt": "2026-11-03T08:17:02.057Z",
+  "version": "0.3.11",
+  "generatedAt": "2026-11-17T03:30:43.036Z",
   "files": {
     "maodie-animation/扒拉杯子.webm": {
       "sha256": "ac748c6c1416c678b662f0e03f06da27741d67a5298ce39e27885b82d4c7297c",
@@ -78,6 +78,10 @@
       "sha256": "0e6f52c9c1ce24ba55e5d875d2194a52c1f8cc17b4fcfb9d3af1cea80eeaa387",
       "bytes": 157677
     },
+    "maodie-animation/神之八秒.webm": {
+      "sha256": "e20f4c543d18671b229ced4fa514e2ae6c290c6fcdd5bbcdfec9559a6905f757",
+      "bytes": 830088
+    },
     "maodie-animation/竖中指.webm": {
       "sha256": "5280460de16e024abd3cc9ef41da486bb5f117067296c7192e3ea0ce96290d36",
       "bytes": 77922
@@ -131,6 +135,10 @@
       "bytes": 416072
     },
     "maodie-config.json": {
+      "sha256": "f51fdead85d111ec2c37590b4b47356d6577177549184ab78ae153a8cff253d6",
+      "bytes": 2716
+    },
+    "maodie-config.json.bak-20261117112939": {
       "sha256": "3d714567dcef9eef826e624c6ef2eb206e021cb45ea827ee74b7ff9af971301d",
       "bytes": 2689
     }
